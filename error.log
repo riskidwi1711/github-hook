@@ -1,0 +1,3 @@
+{"level":"error","message":"Invalid signature.","service":"github-webhook","timestamp":"2025-07-07 14:20:37"}
+{"level":"error","message":"Invalid signature.","service":"github-webhook","timestamp":"2025-07-07 14:27:34"}
+{"level":"error","message":"[deploy.sh] stderr: Cloning into '/home/riski/deployments/riski-portofolio'...","service":"github-webhook","timestamp":"2025-07-07 14:31:28"}
