@@ -6,15 +6,13 @@ set -e
 # --- Konfigurasi Utama (WAJIB DIUBAH SESUAI KEBUTUHAN) ---
 # Direktori utama tempat semua repositori akan di-clone
 DEPLOY_DIR="/home/riski/deployments" # Ganti dengan path absolut Anda
-# Port yang diekspos oleh aplikasi di dalam container (sesuai EXPOSE di Dockerfile proyek)
-CONTAINER_PORT=3000
 # ---------------------------------------------------------
 
 # --- Fungsi untuk mencari port acak yang tersedia ---
 find_random_available_port() {
   MIN_PORT=49152
   MAX_PORT=65535
-  echo "Mencari port acak yang tersedia antara $MIN_PORT dan $MAX_PORT..."
+  echo "Mencari port acak yang tersedia antara $MIN_PORT dan $MAX_PORT..." >&2
   for i in {1..100}; do
     RANDOM_PORT=$(shuf -i $MIN_PORT-$MAX_PORT -n 1)
     # Cek apakah port sudah digunakan oleh TCP atau UDP
@@ -61,6 +59,30 @@ else
 fi
 echo "Sinkronisasi kode selesai. Sekarang berada di direktori: $(pwd)"
 
+# --- Deteksi Port dari Dockerfile ---
+echo "Mendeteksi port yang diekspos dari Dockerfile..."
+if [ ! -f "Dockerfile" ]; then
+    echo "Error: Dockerfile tidak ditemukan di root repositori." >&2
+    exit 1
+fi
+# Cari baris EXPOSE, abaikan komentar, ambil baris terakhir jika ada banyak
+EXPOSE_LINE=$(grep -i '^[[:space:]]*EXPOSE' Dockerfile | tail -n 1)
+
+if [ -z "$EXPOSE_LINE" ]; then
+  echo "Error: Tidak ada instruksi EXPOSE yang valid ditemukan di Dockerfile." >&2
+  exit 1
+fi
+
+# Ekstrak nomor port (ambil field kedua dan hapus '/tcp' atau '/udp' jika ada)
+CONTAINER_PORT=$(echo "$EXPOSE_LINE" | awk '{print $2}' | sed 's|/.*||')
+
+if ! [[ "$CONTAINER_PORT" =~ ^[0-9]+$ ]]; then
+    echo "Error: Port yang diekstrak '$CONTAINER_PORT' bukan angka yang valid." >&2
+    exit 1
+fi
+echo "Port container yang terdeteksi: $CONTAINER_PORT"
+# ------------------------------------
+
 # --- Langkah Deployment Docker ---
 echo "--- Memulai proses Docker ---"
 
@@ -73,7 +95,6 @@ fi
 
 # 6. Bangun image Docker baru dari Dockerfile di dalam repo
 echo "Membangun image Docker baru: $IMAGE_NAME"
-# Opsi --no-cache bisa ditambahkan jika perlu build dari awal: docker build --no-cache -t "$IMAGE_NAME" .
 docker build -t "$IMAGE_NAME" .
 
 # 7. Jalankan container Docker baru
@@ -83,4 +104,3 @@ docker run -d -p "$HOST_PORT":"$CONTAINER_PORT" --name "$CONTAINER_NAME" --resta
 echo "--- Deployment untuk $REPO_NAME selesai! ---"
 echo "Aplikasi '$REPO_NAME' sekarang berjalan di http://localhost:$HOST_PORT"
 exit 0
-

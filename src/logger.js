@@ -17,9 +17,9 @@ const logger = winston.createLogger({
   // Transports (tujuan output log)
   transports: [
     // Menyimpan log error ke file error.log
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: '../logs/error.log', level: 'error' }),
     // Menyimpan semua log ke file combined.log
-    new winston.transports.File({ filename: 'combined.log' })
+    new winston.transports.File({ filename: '../logs/combined.log' })
   ]
 });
 

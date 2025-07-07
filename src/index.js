@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
@@ -5,9 +6,13 @@ const logger = require('./logger');
 const { notFound, errorHandler } = require('./errorHandler'); // Import error handlers
 
 const app = express();
-const port = 3002;
+const port = process.env.PORT || 3002;
 
-const secret = process.env.GITHUB_WEBHOOK_SECRET || 'riskidwipatrio1711';
+const secret = process.env.GITHUB_WEBHOOK_SECRET;
+if (!secret) {
+  logger.error('GITHUB_WEBHOOK_SECRET is not set. Please check your .env file or environment variables.');
+  process.exit(1);
+}
 
 app.use(express.raw({ type: 'application/json' }));
 
@@ -49,7 +54,7 @@ app.post('/webhook', (req, res) => {
     return res.status(400).send('Repository URL not found in payload');
   }
 
-  const deployScript = spawn('./deploy.sh', [repositoryUrl]);
+  const deployScript = spawn('../scripts/deploy.sh', [repositoryUrl]);
 
   deployScript.on('error', (err) => {
     logger.error(`Failed to start deployment script: ${err.message}`);
@@ -79,6 +84,3 @@ app.use(errorHandler);
 app.listen(port, () => {
   logger.info(`Webhook listener running at http://localhost:${port}`);
 });
-
-
-
