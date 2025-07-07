@@ -6,11 +6,30 @@ set -e
 # --- Konfigurasi Utama (WAJIB DIUBAH SESUAI KEBUTUHAN) ---
 # Direktori utama tempat semua repositori akan di-clone
 DEPLOY_DIR="/home/riski/deployments" # Ganti dengan path absolut Anda
-# Port di mesin host yang akan digunakan. Setiap proyek harus menggunakan port yang berbeda!
-HOST_PORT=8080
 # Port yang diekspos oleh aplikasi di dalam container (sesuai EXPOSE di Dockerfile proyek)
 CONTAINER_PORT=3000
 # ---------------------------------------------------------
+
+# --- Fungsi untuk mencari port acak yang tersedia ---
+find_random_available_port() {
+  MIN_PORT=49152
+  MAX_PORT=65535
+  echo "Mencari port acak yang tersedia antara $MIN_PORT dan $MAX_PORT..."
+  for i in {1..100}; do
+    RANDOM_PORT=$(shuf -i $MIN_PORT-$MAX_PORT -n 1)
+    # Cek apakah port sudah digunakan oleh TCP atau UDP
+    if ! ss -lntu | grep -q ":$RANDOM_PORT"; then
+      echo "$RANDOM_PORT"
+      return
+    fi
+  done
+  echo "Error: Tidak dapat menemukan port yang tersedia setelah 100 percobaan." >&2
+  exit 1
+}
+
+# Cari dan tetapkan port yang tersedia untuk host
+HOST_PORT=$(find_random_available_port)
+echo "Port host yang akan digunakan: $HOST_PORT"
 
 # 1. Validasi Input
 REPO_URL=$1
@@ -59,11 +78,7 @@ docker build -t "$IMAGE_NAME" .
 
 # 7. Jalankan container Docker baru
 echo "Menjalankan container Docker baru: $CONTAINER_NAME di port $HOST_PORT"
-docker run -d 
-    -p "$HOST_PORT":"$CONTAINER_PORT" 
-    --name "$CONTAINER_NAME" 
-    --restart unless-stopped 
-    "$IMAGE_NAME"
+docker run -d -p "$HOST_PORT":"$CONTAINER_PORT" --name "$CONTAINER_NAME" --restart unless-stopped "$IMAGE_NAME"
 
 echo "--- Deployment untuk $REPO_NAME selesai! ---"
 echo "Aplikasi '$REPO_NAME' sekarang berjalan di http://localhost:$HOST_PORT"
